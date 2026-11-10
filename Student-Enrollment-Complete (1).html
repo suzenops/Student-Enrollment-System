@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Enrollment System</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f3f5fa;color:#202c42}header{background:#263b75;color:white;padding:25px 6%}header h1{margin:0 0 7px}header p{margin:0;color:#d8e2ff}main{max-width:1100px;margin:30px auto;padding:0 18px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}.card,section{background:white;border-radius:12px;padding:22px;box-shadow:0 3px 12px #17274a12}.card strong{display:block;font-size:30px;margin-top:10px;color:#3157b7}section{margin-top:20px}h2{margin:0 0 15px}.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px}input,select{padding:11px;border:1px solid #cbd3e0;border-radius:7px;width:100%;font:inherit}button{background:#3157b7;color:white;border:0;border-radius:7px;padding:11px 18px;cursor:pointer;font:inherit}button:hover{background:#263b75}.secondary{background:#59677e}.heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:12px;text-align:left;border-bottom:1px solid #e5e8f0}th{background:#f3f5fa}.message{min-height:20px;margin-top:12px;color:#226347}.error{color:#a52a2a}@media(max-width:550px){.cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>Student Enrollment System</h1><p>Student and Course Management Dashboard · Object-Oriented JavaScript</p></header>
+<main>
+<div class="cards"><div class="card">Students<strong id="studentCount">0</strong></div><div class="card">Courses<strong id="courseCount">0</strong></div><div class="card">Enrollments<strong id="enrollmentCount">0</strong></div></div>
+<section><h2>Register Student</h2><form id="studentForm" class="form"><input id="studentId" type="number" min="1" step="1" placeholder="Student ID" aria-label="Student ID" required><input id="firstName" placeholder="First Name" aria-label="First Name" required><input id="lastName" placeholder="Last Name" aria-label="Last Name" required><input id="email" type="email" placeholder="Email" aria-label="Email" required><button type="submit">Add Student</button></form></section>
+<section><h2>Create Course</h2><form id="courseForm" class="form"><input id="courseId" type="number" min="1" step="1" placeholder="Course ID" aria-label="Course ID" required><input id="courseCode" maxlength="10" placeholder="Course Code (MAC250)" aria-label="Course Code" required><input id="courseName" placeholder="Course Name" aria-label="Course Name" required><input id="credits" type="number" min="1" max="30" step="1" placeholder="Credits" aria-label="Credits" required><button type="submit">Add Course</button></form></section>
+<section><h2>Enroll Student in Course</h2><form id="enrollmentForm" class="form"><select id="studentSelect" aria-label="Select Student" required></select><select id="courseSelect" aria-label="Select Course" required></select><button type="submit">Enroll Student</button></form></section>
+<p id="message" class="message" role="status" aria-live="polite"></p>
+<section><div class="heading"><h2>Students</h2><button class="secondary" data-show="students">Show All Students</button></div><div class="scroll"><table><thead><tr><th>ID</th><th>First Name</th><th>Last Name</th><th>Email</th></tr></thead><tbody id="studentRows"></tbody></table></div></section>
+<section><div class="heading"><h2>Courses</h2><button class="secondary" data-show="courses">Show All Courses</button></div><div class="scroll"><table><thead><tr><th>ID</th><th>Code</th><th>Course Name</th><th>Credits</th></tr></thead><tbody id="courseRows"></tbody></table></div></section>
+<section><div class="heading"><h2>Enrollments</h2><button class="secondary" data-show="enrollments">Show All Enrollments</button></div><div class="scroll"><table><thead><tr><th>Student</th><th>Course</th><th>Registration Date</th></tr></thead><tbody id="enrollmentRows"></tbody></table></div></section>
+</main><script>
+'use strict';
+// Each class models one entity in the Student/Course/Enrollment relationship.
+class Student {
+  constructor(id, firstName, lastName, email) {
+    this.id = id;
+    this.firstName = firstName;
+    this.lastName = lastName;
+    this.email = email;
+  }
+  get fullName() { return `${this.firstName} ${this.lastName}`; }
+}
+class Course {
+  constructor(id, code, name, credits) {
+    this.id = id;
+    this.code = code;
+    this.name = name;
+    this.credits = credits;
+  }
+}
+class Enrollment {
+  constructor(studentId, courseId, registrationDate = new Date().toISOString()) {
+    this.studentId = studentId;
+    this.courseId = courseId;
+    this.registrationDate = registrationDate;
+  }
+}
+class EnrollmentSystem {
+  constructor() {
+    this.students = this.load('students').map(s => new Student(s.id, s.firstName, s.lastName, s.email));
+    this.courses = this.load('courses').map(c => new Course(c.id, c.code, c.name, c.credits));
+    this.enrollments = this.load('enrollments').map(e => new Enrollment(e.studentId, e.courseId, e.registrationDate));
+  }
+  load(key) {
+    try { const value = JSON.parse(localStorage.getItem(`enrollment_${key}`) || '[]'); return Array.isArray(value) ? value : []; }
+    catch { return []; }
+  }
+  save() {
+    localStorage.setItem('enrollment_students', JSON.stringify(this.students));
+    localStorage.setItem('enrollment_courses', JSON.stringify(this.courses));
+    localStorage.setItem('enrollment_enrollments', JSON.stringify(this.enrollments));
+  }
+  addStudent(student) {
+    if (this.students.some(s => s.id === student.id)) throw Error('Student ID already exists.');
+    if (this.students.some(s => s.email.toLowerCase() === student.email.toLowerCase())) throw Error('Email already exists.');
+    this.students.push(student); this.save();
+  }
+  addCourse(course) {
+    if (this.courses.some(c => c.id === course.id)) throw Error('Course ID already exists.');
+    if (this.courses.some(c => c.code.toLowerCase() === course.code.toLowerCase())) throw Error('Course code already exists.');
+    this.courses.push(course); this.save();
+  }
+  enroll(studentId, courseId) {
+    if (!this.students.some(s => s.id === studentId) || !this.courses.some(c => c.id === courseId)) throw Error('Choose an existing student and course.');
+    if (this.enrollments.some(e => e.studentId === studentId && e.courseId === courseId)) throw Error('Student is already enrolled in this course.');
+    this.enrollments.push(new Enrollment(studentId, courseId)); this.save();
+  }
+}
+const system = new EnrollmentSystem();
+const el = id => document.getElementById(id);
+function notify(message, error = false) { el('message').textContent = message; el('message').classList.toggle('error', error); }
+function populateTable(id, rows, emptyText) {
+  const tbody = el(id); tbody.replaceChildren();
+  if (!rows.length) { const tr = document.createElement('tr'); const td = document.createElement('td'); td.colSpan = id === 'studentRows' ? 4 : 4; td.textContent = emptyText; tr.append(td); tbody.append(tr); return; }
+  for (const values of rows) {
+    const tr = document.createElement('tr');
+    for (const value of values) { const td = document.createElement('td'); td.textContent = String(value); tr.append(td); }
+    tbody.append(tr);
+  }
+}
+function refresh() {
+  el('studentCount').textContent = system.students.length;
+  el('courseCount').textContent = system.courses.length;
+  el('enrollmentCount').textContent = system.enrollments.length;
+  populateTable('studentRows', system.students.map(s => [s.id, s.firstName, s.lastName, s.email]), 'No students yet.');
+  populateTable('courseRows', system.courses.map(c => [c.id, c.code, c.name, c.credits]), 'No courses yet.');
+  populateTable('enrollmentRows', system.enrollments.map(e => {
+    const s = system.students.find(s => s.id === e.studentId);
+    const c = system.courses.find(c => c.id === e.courseId);
+    return [s ? s.fullName : e.studentId, c ? `${c.code} — ${c.name}` : e.courseId, new Date(e.registrationDate).toLocaleString()];
+  }), 'No enrollments yet.');
+  const studentSelection = el('studentSelect').value, courseSelection = el('courseSelect').value;
+  el('studentSelect').replaceChildren(new Option('Select Student', ''));
+  el('courseSelect').replaceChildren(new Option('Select Course', ''));
+  for (const s of system.students) el('studentSelect').add(new Option(`${s.id} — ${s.fullName}`, String(s.id)));
+  for (const c of system.courses) el('courseSelect').add(new Option(`${c.code} — ${c.name}`, String(c.id)));
+  el('studentSelect').value = studentSelection;
+  el('courseSelect').value = courseSelection;
+}
+function positiveInteger(value, label) {
+  const n = Number(value);
+  if (!Number.isSafeInteger(n) || n < 1) throw Error(`${label} must be a positive whole number.`);
+  return n;
+}
+el('studentForm').addEventListener('submit', event => {
+  event.preventDefault();
+  try {
+    const first = el('firstName').value.trim(), last = el('lastName').value.trim(), email = el('email').value.trim();
+    if (!first || !last || !email) throw Error('Complete all student fields.');
+    system.addStudent(new Student(positiveInteger(el('studentId').value, 'Student ID'), first, last, email));
+    event.target.reset(); refresh(); notify('Student added successfully.');
+  } catch (error) { notify(error.message, true); }
+});
+el('courseForm').addEventListener('submit', event => {
+  event.preventDefault();
+  try {
+    const code = el('courseCode').value.trim().toUpperCase(), name = el('courseName').value.trim();
+    if (!code || !name) throw Error('Complete all course fields.');
+    const credits = positiveInteger(el('credits').value, 'Credits');
+    if (credits > 30) throw Error('Credits must be 30 or fewer.');
+    system.addCourse(new Course(positiveInteger(el('courseId').value, 'Course ID'), code, name, credits));
+    event.target.reset(); refresh(); notify('Course added successfully.');
+  } catch (error) { notify(error.message, true); }
+});
+el('enrollmentForm').addEventListener('submit', event => {
+  event.preventDefault();
+  try {
+    system.enroll(positiveInteger(el('studentSelect').value, 'Student'), positiveInteger(el('courseSelect').value, 'Course'));
+    event.target.reset(); refresh(); notify('Student enrolled successfully.');
+  } catch (error) { notify(error.message, true); }
+});
+document.querySelectorAll('[data-show]').forEach(button => button.addEventListener('click', () => {
+  refresh(); notify(`Showing all ${button.dataset.show}.`);
+}));
+refresh();
+
+</script>
+</body></html>
